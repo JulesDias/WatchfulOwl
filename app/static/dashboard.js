@@ -29,6 +29,13 @@ const SECTION_CONFIG = {
     subtitle: "Signaux issus des collecteurs sociaux actives",
     params: { source_type: "x" },
   },
+  trash: {
+    title: "Corbeille",
+    subtitle: "Signaux supprimes en attente de purge definitive",
+    endpoint: "/trash",
+    isTrash: true,
+    params: {},
+  },
   all: {
     title: "Tous les signaux",
     subtitle: "Vue complete de la base locale",
@@ -74,14 +81,26 @@ const els = {
   detailLink: document.querySelector("#detail-link"),
   markReadButton: document.querySelector("#mark-read-button"),
   favoriteButton: document.querySelector("#favorite-button"),
+  deleteButton: document.querySelector("#delete-button"),
+  restoreButton: document.querySelector("#restore-button"),
+  purgeButton: document.querySelector("#purge-button"),
+  purgeAllButton: document.querySelector("#purge-all-button"),
   toast: document.querySelector("#toast"),
 };
 
 function init() {
+  console.log("Initializing dashboard...");
+  console.log("DOM ready, elements found:", {
+    deleteButton: Boolean(els.deleteButton),
+    restoreButton: Boolean(els.restoreButton),
+    purgeButton: Boolean(els.purgeButton),
+    purgeAllButton: Boolean(els.purgeAllButton),
+  });
   initDarkMode();
   bindEvents();
   initGitHubModal();
   switchSection(state.currentSection, { resetFilters: false });
+  console.log("Dashboard initialization complete");
 }
 
 function initDarkMode() {
@@ -128,6 +147,35 @@ function bindEvents() {
   els.collectButton?.addEventListener("click", runCollection);
   els.markReadButton?.addEventListener("click", markSelectedSignalRead);
   els.favoriteButton?.addEventListener("click", toggleSelectedSignalFavorite);
+  
+  if (els.deleteButton) {
+    console.log("Binding delete button");
+    els.deleteButton.addEventListener("click", deleteSelectedSignal);
+  } else {
+    console.warn("Delete button not found");
+  }
+  
+  if (els.restoreButton) {
+    console.log("Binding restore button");
+    els.restoreButton.addEventListener("click", restoreSelectedSignal);
+  } else {
+    console.warn("Restore button not found");
+  }
+  
+  if (els.purgeButton) {
+    console.log("Binding purge button");
+    els.purgeButton.addEventListener("click", purgeSelectedSignal);
+  } else {
+    console.warn("Purge button not found");
+  }
+  
+  if (els.purgeAllButton) {
+    console.log("Binding purge all button");
+    els.purgeAllButton.addEventListener("click", purgeAllTrash);
+  } else {
+    console.warn("Purge all button not found");
+  }
+  
   els.detailLink?.addEventListener("click", markSelectedSignalReadFromSource);
   els.searchInput?.addEventListener("input", debounce(loadDashboard));
 
@@ -194,23 +242,42 @@ function syncSeverityChips() {
 async function loadDashboard() {
   setLoading(true);
   try {
+    const isTrash = SECTION_CONFIG[state.currentSection].isTrash;
+    const endpoint = isTrash ? "/trash" : "/signals";
+    const query = isTrash ? `?${new URLSearchParams({ limit: "100" }).toString()}` : `?${buildSignalQuery()}`;
+    
+    console.log("Loading dashboard:", { section: state.currentSection, isTrash, endpoint, query });
+    
     const [stats, signals] = await Promise.all([
-      fetchJson("/stats"),
-      fetchJson(`/signals?${buildSignalQuery()}`),
+      isTrash ? Promise.resolve(null) : fetchJson("/stats"),
+      fetchJson(`${endpoint}${query}`),
     ]);
 
+    console.log("Dashboard loaded:", { statsCount: stats?.total_signals, signalsCount: signals.length });
+    
     state.signals = signals;
-    renderStats(stats);
-    renderTrends(stats);
-    renderSourceBreakdown(stats.count_by_source_type ?? {});
+    if (stats) {
+      renderStats(stats);
+      renderTrends(stats);
+      renderSourceBreakdown(stats.count_by_source_type ?? {});
+    }
     renderSignals(signals);
     syncSelectedSignal();
+    updateTrashVisibility();
   } catch (error) {
     showToast("Erreur de chargement", true);
-    console.error(error);
+    console.error("Dashboard load error:", error);
   } finally {
     setLoading(false);
   }
+}
+
+function updateTrashVisibility() {
+  const isTrash = state.currentSection === "trash";
+  els.purgeAllButton.classList.toggle("hidden", !isTrash);
+  els.sourceFilter.classList.toggle("hidden", isTrash);
+  els.severityFilter.classList.toggle("hidden", isTrash);
+  els.scoreFilter.classList.toggle("hidden", isTrash);
 }
 
 function buildSignalQuery() {
@@ -464,15 +531,104 @@ function showEmptyDetail() {
 function updateDetailActionButtons(signal) {
   const isReviewed = signal.status === "reviewed";
   const isFavorite = Boolean(signal.is_favorite);
+  const isDeleted = Boolean(signal.deleted_at);
 
-  els.markReadButton.classList.toggle("active", isReviewed);
-  els.markReadButton.disabled = isReviewed;
-  els.markReadButton.title = isReviewed ? "Deja lu" : "Marquer comme lu";
-  els.markReadButton.setAttribute("aria-pressed", String(isReviewed));
+  if (els.markReadButton) {
+    els.markReadButton.classList.toggle("active", isReviewed);
+    els.markReadButton.disabled = isReviewed || isDeleted;
+    els.markReadButton.title = isReviewed ? "Deja lu" : "Marquer comme lu";
+    els.markReadButton.setAttribute("aria-pressed", String(isReviewed));
+  }
 
-  els.favoriteButton.classList.toggle("active", isFavorite);
-  els.favoriteButton.title = isFavorite ? "Retirer des favoris" : "Ajouter aux favoris";
-  els.favoriteButton.setAttribute("aria-pressed", String(isFavorite));
+  if (els.favoriteButton) {
+    els.favoriteButton.classList.toggle("active", isFavorite);
+    els.favoriteButton.disabled = isDeleted;
+    els.favoriteButton.title = isFavorite ? "Retirer des favoris" : "Ajouter aux favoris";
+    els.favoriteButton.setAttribute("aria-pressed", String(isFavorite));
+  }
+
+  if (els.deleteButton) {
+    els.deleteButton.classList.toggle("hidden", isDeleted);
+  }
+  if (els.restoreButton) {
+    els.restoreButton.classList.toggle("hidden", !isDeleted);
+  }
+  if (els.purgeButton) {
+    els.purgeButton.classList.toggle("hidden", !isDeleted);
+  }
+}
+
+async function deleteSelectedSignal() {
+  const signal = getSelectedSignal();
+  if (!signal) {
+    console.warn("No signal selected");
+    return;
+  }
+
+  console.log("Deleting signal:", signal.id, signal.title);
+  try {
+    await fetchJson(`/signals/${signal.id}/delete`, { method: "POST" });
+    showToast("Signal envoye a la corbeille");
+    await loadDashboard();
+  } catch (error) {
+    showToast("Impossible de supprimer le signal", true);
+    console.error("Delete error:", error);
+  }
+}
+
+async function restoreSelectedSignal() {
+  const signal = getSelectedSignal();
+  if (!signal) {
+    console.warn("No signal selected");
+    return;
+  }
+
+  console.log("Restoring signal:", signal.id, signal.title);
+  try {
+    await fetchJson(`/signals/${signal.id}/restore`, { method: "POST" });
+    showToast("Signal restaure");
+    await loadDashboard();
+  } catch (error) {
+    showToast("Impossible de restaurer le signal", true);
+    console.error("Restore error:", error);
+  }
+}
+
+async function purgeSelectedSignal() {
+  const signal = getSelectedSignal();
+  if (!signal) {
+    console.warn("No signal selected");
+    return;
+  }
+
+  if (!confirm(`Confirmer la suppression definitive de: "${signal.title}"?`)) return;
+
+  console.log("Purging signal:", signal.id, signal.title);
+  try {
+    await fetchJson(`/trash/${signal.id}/purge`, { method: "POST" });
+    showToast("Signal supprime definitivement");
+    await loadDashboard();
+  } catch (error) {
+    showToast("Impossible de purger le signal", true);
+    console.error("Purge error:", error);
+  }
+}
+
+async function purgeAllTrash() {
+  if (!confirm("Confirmer la suppression definitive de TOUS les signaux de la corbeille?")) return;
+
+  console.log("Purging all trash");
+  setLoading(true);
+  try {
+    const result = await fetchJson("/trash/purge-all", { method: "POST" });
+    showToast(`${result.count} signaux supprimes definitivement`);
+    await loadDashboard();
+  } catch (error) {
+    showToast("Impossible de vider la corbeille", true);
+    console.error("Purge all error:", error);
+  } finally {
+    setLoading(false);
+  }
 }
 
 async function fetchJson(url, options = {}) {

@@ -2,6 +2,7 @@ import json
 import logging
 import re
 from collections import Counter
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -49,7 +50,7 @@ async def list_signals(
     q: str | None = None,
     session: Session = Depends(get_session),
 ) -> list[SignalRead]:
-    statement = select(Signal)
+    statement = select(Signal).where(Signal.deleted_at.is_(None))
     if source_type:
         statement = statement.where(Signal.source_type == source_type)
     if severity:
@@ -103,6 +104,87 @@ async def toggle_signal_favorite(
     session.commit()
     session.refresh(signal)
     return _to_signal_read(signal)
+
+
+@router.post("/signals/{signal_id}/delete", response_model=SignalRead)
+async def delete_signal(signal_id: int, session: Session = Depends(get_session)) -> SignalRead:
+    """Soft delete a signal (move to trash)."""
+    signal = session.get(Signal, signal_id)
+    if not signal:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    if signal.deleted_at is not None:
+        raise HTTPException(status_code=400, detail="Signal is already deleted")
+    
+    signal.deleted_at = datetime.now(timezone.utc)
+    session.add(signal)
+    session.commit()
+    session.refresh(signal)
+    logger.info("Deleted signal: %s", signal.title)
+    return _to_signal_read(signal)
+
+
+@router.post("/signals/{signal_id}/restore", response_model=SignalRead)
+async def restore_signal(signal_id: int, session: Session = Depends(get_session)) -> SignalRead:
+    """Restore a deleted signal from trash."""
+    signal = session.get(Signal, signal_id)
+    if not signal:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    if signal.deleted_at is None:
+        raise HTTPException(status_code=400, detail="Signal is not deleted")
+    
+    signal.deleted_at = None
+    session.add(signal)
+    session.commit()
+    session.refresh(signal)
+    logger.info("Restored signal: %s", signal.title)
+    return _to_signal_read(signal)
+
+
+@router.get("/trash", response_model=list[SignalRead])
+async def list_trash(
+    limit: int = Query(default=50, ge=1, le=500),
+    session: Session = Depends(get_session),
+) -> list[SignalRead]:
+    """List all deleted signals in trash."""
+    statement = (
+        select(Signal)
+        .where(Signal.deleted_at.isnot(None))
+        .order_by(Signal.deleted_at.desc())
+        .limit(limit)
+    )
+    signals = session.exec(statement).all()
+    return [_to_signal_read(signal) for signal in signals]
+
+
+@router.post("/trash/{signal_id}/purge")
+async def purge_signal(signal_id: int, session: Session = Depends(get_session)) -> dict[str, Any]:
+    """Permanently delete a signal from trash."""
+    signal = session.get(Signal, signal_id)
+    if not signal:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    if signal.deleted_at is None:
+        raise HTTPException(status_code=400, detail="Signal is not in trash")
+    
+    title = signal.title
+    session.delete(signal)
+    session.commit()
+    logger.info("Permanently purged signal: %s", title)
+    return {"status": "deleted", "signal_id": signal_id, "title": title}
+
+
+@router.post("/trash/purge-all")
+async def purge_all_trash(session: Session = Depends(get_session)) -> dict[str, Any]:
+    """Permanently delete all signals in trash."""
+    statement = select(Signal).where(Signal.deleted_at.isnot(None))
+    deleted_signals = session.exec(statement).all()
+    count = len(deleted_signals)
+    
+    for signal in deleted_signals:
+        session.delete(signal)
+    
+    session.commit()
+    logger.info("Purged %d signals from trash", count)
+    return {"status": "purged", "count": count}
 
 
 @router.get("/alerts", response_model=list[SignalRead])

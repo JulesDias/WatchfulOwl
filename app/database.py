@@ -29,13 +29,19 @@ def ensure_schema_compatibility() -> None:
         return
 
     columns = {column["name"] for column in inspector.get_columns("signals")}
-    if "is_favorite" in columns:
+    
+    if "is_favorite" in columns and "deleted_at" in columns:
         return
 
     with engine.begin() as connection:
-        connection.execute(
-            text("ALTER TABLE signals ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0")
-        )
+        if "is_favorite" not in columns:
+            connection.execute(
+                text("ALTER TABLE signals ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0")
+            )
+        if "deleted_at" not in columns:
+            connection.execute(
+                text("ALTER TABLE signals ADD COLUMN deleted_at DATETIME")
+            )
 
 
 def get_session() -> Generator[Session, None, None]:

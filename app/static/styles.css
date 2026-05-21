@@ -512,6 +512,28 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+#purge-all-button {
+  width: auto;
+  height: auto;
+  padding: 10px 16px;
+  background: var(--accent-danger);
+  color: white;
+  font-size: 13px;
+}
+
+#purge-all-button:hover {
+  background: #e63028;
+  box-shadow: var(--shadow-md);
+}
+
+#purge-all-button:active {
+  background: #d62b1f;
+}
+
+#purge-all-button.hidden {
+  display: none;
+}
+
 .result-count {
   font-size: 12px;
   color: var(--text-tertiary);
@@ -962,8 +984,8 @@ body {
   bottom: 24px;
   z-index: 1000;
   padding: 12px 16px;
-  background: var(--text-primary);
-  color: white;
+  background: white;
+  color: black;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -973,6 +995,7 @@ body {
 
 .toast.error {
   background: var(--severity-critical);
+  color: white;
 }
 
 /* ============================================

@@ -67,6 +67,12 @@
               <span>Reseaux</span>
             </button>
           </li>
+          <li>
+            <button class="nav-item" data-section="trash">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z"/></svg>
+              <span>Corbeille</span>
+            </button>
+          </li>
         </ul>
       </div>
 
@@ -145,6 +151,9 @@
                 <option value="info">Info</option>
               </select>
               <input id="score-filter" type="number" class="filter-select" min="0" max="50" placeholder="Score min" />
+              <button id="purge-all-button" class="action-button secondary hidden" type="button" title="Vider la corbeille">
+                Vider la corbeille
+              </button>
             </div>
             <span id="result-count" class="result-count">0 resultat</span>
           </div>
@@ -197,6 +206,15 @@
               <button id="favorite-button" class="action-button secondary" type="button" title="Ajouter aux favoris">
                 <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-1.99.9-1.99 2L3 21l9-4 9 4V5c0-1.1-.89-2-2-2z"/></svg>
               </button>
+              <button id="delete-button" class="action-button secondary" type="button" title="Envoyer a la corbeille">
+                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z"/></svg>
+              </button>
+              <button id="restore-button" class="action-button secondary hidden" type="button" title="Restaurer de la corbeille">
+                <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.41 1.41C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+              </button>
+              <button id="purge-button" class="action-button secondary hidden" type="button" title="Supprimer definitivement">
+                <svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
+              </button>
               <a id="detail-link" class="action-button primary" href="#" target="_blank" rel="noreferrer">
                 Lire la source
               </a>
@@ -244,6 +262,6 @@
       </div>
     </div>
     
-    <script src="/static/dashboard.js?v=github-add-1" defer></script>
+    <script src="/static/dashboard.js?v=trash-v2" defer></script>
   </body>
 </html>

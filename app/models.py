@@ -29,6 +29,7 @@ class Signal(SQLModel, table=True):
     severity: str = Field(default="info", index=True)
     status: str = Field(default="new", index=True)
     is_favorite: bool = Field(default=False, index=True)
+    deleted_at: datetime | None = Field(default=None, index=True)
     fingerprint: str = Field(
         default="",
         sa_column=Column(String, unique=True, index=True, nullable=False),
