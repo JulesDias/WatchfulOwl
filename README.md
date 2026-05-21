@@ -1,41 +1,69 @@
 # The Watchful Owl
 
-The Watchful Owl est un POC de bot de veille cyber defensif. Il collecte des signaux faibles depuis des sources publiques autorisees, les normalise dans un modele commun, extrait des metadonnees utiles, deduplique, score les signaux et expose les resultats via une API FastAPI avec une interface web de lecture.
+**The Watchful Owl** est une plateforme de renseignement en cybersécurité défensive. Elle collecte des signaux faibles provenant de sources publiques autorisées, les normalise selon un modèle commun, extrait des métadonnées pertinentes, déduplique, score les signaux et expose les résultats via une API FastAPI avec un tableau de bord web.
 
-Le projet ne clone pas de depot, n'execute aucun exploit et ne stocke que des metadonnees, du texte, des liens, des scores et des resumes.
+### Principes de conception
 
-## Sources
+- **Observations uniquement** : collecte passive de renseignements publics
+- **Pas de code malveillant** : aucun clonage de dépôt d'exploit, aucune exécution de PoC
+- **Données non-sensibles** : stockage de métadonnées, textes, liens, scores et résumés uniquement
+- **Transparence** : configuration via variables d'environnement, logs détaillés
 
-- RSS cyber par defaut :
-  - `https://www.bleepingcomputer.com/feed/`
-  - `https://thehackernews.com/feeds/posts/default`
-  - `https://www.darkreading.com/rss.xml`
-  - `https://www.cisa.gov/news.xml`
-- GitHub Search Repositories API pour reperer des depots recents lies a CVE, PoC, exploit, RCE, LPE ou auth bypass.
-- X/Twitter Recent Search API v2, activee par defaut mais inactive sans `X_BEARER_TOKEN`.
+## Sources de données
 
-## Regles de securite
+### Flux RSS
+- **Bleeping Computer** : `https://www.bleepingcomputer.com/feed/`
+- **The Hacker News** : `https://thehackernews.com/feeds/posts/default`
+- **Dark Reading** : `https://www.darkreading.com/rss.xml`
+- **CISA Alerts** : `https://www.cisa.gov/news.xml`
+- **HackerNews** : `https://news.ycombinator.com/rss` (articles tech/sécurité tendance)
+- **Reddit r/netsec** : `https://www.reddit.com/r/netsec/.rss` (discussions sécurité réseau)
+- **CS Hub** : `https://www.cshub.com/rss/categories/attacks` (incidents cyber)
 
-- Aucune execution de code d'exploit.
-- Aucun clonage automatique de depot d'exploit.
-- Utilisation d'APIs officielles ou de flux publics autorises.
-- Pas de secret en dur dans le code.
-- Tokens et webhooks fournis via variables d'environnement.
-- Le collecteur X est optionnel et ne demarre pas sans `X_BEARER_TOKEN`.
-- Les erreurs HTTP et les rate limits sont logges sans faire planter l'application.
+### API
+- **GitHub Search API** : dépôts récents contenant CVE, PoC, exploit, RCE, LPE ou authentification bypass
+- **X/Twitter API v2** : recherche récente sur menaces cyber (optionnel, nécessite authentification)
 
-## Limites du POC
+## Sécurité
 
-- SQLite est utilise pour simplifier le lancement local.
-- Le scoring est heuristique et doit etre calibre sur des donnees reelles.
-- La deduplication repose sur URL, CVE ou titre normalise.
-- L'API n'inclut pas encore d'authentification.
-- Le dashboard est une API JSON, pas encore une interface web.
+### Garanties
+- Aucune exécution de code malveillant
+- Aucun clonage automatique de dépôts d'exploit
+- Utilisation d'APIs officielles et flux publics autorisés
+- Secrets stockés en variables d'environnement uniquement
+- Gestion gracieuse des erreurs HTTP et rate limits
 
-## Installation locale
+### Configuration d'accès
+- `GITHUB_TOKEN` : optionnel mais recommandé (augmente les limites API)
+- `X_BEARER_TOKEN` : optionnel (désactive le collecteur X/Twitter s'il manque)
+- `DISCORD_WEBHOOK_URL` : optionnel (alerte Discord désactivée si vide)
 
-Prerequis : Python 3.12+.
+## État du projet
 
+### Fonctionnalités actuelles
+- Collecte multi-sources (RSS, GitHub, X)
+- Pipeline de traitement : extraction, déduplication, scoring
+- API REST complète avec FastAPI
+- Tableau de bord web interactif
+- Scheduler de collecte autonome
+- Intégration Discord pour alertes
+- Tests unitaires
+
+### Points à affiner
+- **Base de données** : SQLite utilisé pour le déploiement local (PostgreSQL envisagé)
+- **Scoring** : basé sur heuristiques (calibrage recommandé en production)
+- **Déduplication** : URL, CVE ou titre normalisé
+- **API** : pas encore d'authentification (à ajouter)
+
+## Installation
+
+### Prérequis
+- Python 3.12+
+- pip ou poetry
+
+### Setup local
+
+**Windows :**
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
@@ -43,8 +71,7 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Sous Linux ou macOS :
-
+**Linux / macOS :**
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -54,74 +81,104 @@ cp .env.example .env
 
 ## Configuration
 
-Editez `.env` selon vos besoins :
+Éditez `.env` selon votre déploiement :
 
 ```env
+# Application
 APP_NAME=The Watchful Owl
-DATABASE_URL=sqlite:///./watchful_owl.db
 LOG_LEVEL=INFO
 
+# Base de données
+DATABASE_URL=sqlite:///./watchful_owl.db
+
+# Authentification APIs (optionnel)
 GITHUB_TOKEN=
 X_BEARER_TOKEN=
 DISCORD_WEBHOOK_URL=
 
+# Collecte
 ENABLE_RSS=true
 ENABLE_GITHUB=true
 ENABLE_X=true
 
+# Paramètres
 COLLECTION_INTERVAL_MINUTES=15
 ALERT_SCORE_THRESHOLD=15
 MAX_RESULTS_PER_SOURCE=25
+HTTP_TIMEOUT_SECONDS=15.0
+GITHUB_MIN_STARS=0
 ```
 
-`GITHUB_TOKEN` est optionnel mais recommande pour augmenter les limites de l'API GitHub. `DISCORD_WEBHOOK_URL` est optionnel : si la valeur est vide, aucune alerte Discord n'est envoyee.
-`ENABLE_X` active uniquement l'API officielle X v2 Recent Search. Sans `X_BEARER_TOKEN`, le collecteur X se desactive proprement et ne fait aucun appel.
+### Variables clés
+| Variable | Obligatoire | Effet |
+|----------|------------|-------|
+| `GITHUB_TOKEN` | Non | Augmente limites API GitHub |
+| `X_BEARER_TOKEN` | Non | Active collecteur X/Twitter |
+| `DISCORD_WEBHOOK_URL` | Non | Active alertes Discord |
+| `ALERT_SCORE_THRESHOLD` | Non | Seuil de score minimum pour alerte |
 
-## Lancement
+## Démarrage
 
+### Development
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-Au demarrage, l'application cree la base SQLite si necessaire et lance le scheduler APScheduler. Une collecte peut aussi etre declenchee manuellement.
-
-Interface web :
-
-```text
-http://localhost:8000/
+### Production
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
+
+L'application crée automatiquement la base SQLite et lance le scheduler. Une collecte peut être déclenchée manuellement via l'API.
+
+**Accès** : http://localhost:8000/
 
 ## Tests
 
+### Exécuter les tests
 ```bash
 pytest
 ```
 
-Lint optionnel :
-
+### Linting (optionnel)
 ```bash
 ruff check .
+ruff format .
 ```
 
-## Exemples API
+## Utilisation API
 
+### Exemples de requêtes
 ```bash
+# Santé de l'application
 curl http://localhost:8000/health
+
+# Tous les signaux
 curl http://localhost:8000/signals
+
+# Signaux filtrés
 curl "http://localhost:8000/signals?source_type=github&min_score=12"
+curl "http://localhost:8000/signals?limit=50"
+
+# Alertes générées
 curl http://localhost:8000/alerts
+
+# Statistiques
 curl http://localhost:8000/stats
+
+# Déclencher collecte manuelle
 curl -X POST http://localhost:8000/collect/run
 ```
 
-Routes exposees :
-
-- `GET /health`
-- `GET /signals`
-- `GET /signals/{id}`
-- `GET /alerts`
-- `GET /stats`
-- `POST /collect/run`
+### Endpoints
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/health` | Status de l'application |
+| GET | `/signals` | Liste tous les signaux |
+| GET | `/signals/{id}` | Détail d'un signal |
+| GET | `/alerts` | Alertes générées |
+| GET | `/stats` | Statistiques globales |
+| POST | `/collect/run` | Collecte manuelle immédiate |
 
 ## Scoring
 
