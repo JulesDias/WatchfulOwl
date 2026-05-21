@@ -6,35 +6,27 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
+from app.bootstrap import bootstrap
 from app.config import get_settings
-from app.database import init_db
 from app.scheduler import start_scheduler, stop_scheduler
 from app.web import STATIC_DIR, router as web_router
 
 
 settings = get_settings()
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-    init_db()
-    logger.info("Starting %s", settings.app_name)
-    logger.info(
-        "Enabled sources: rss=%s github=%s x=%s",
-        settings.enable_rss,
-        settings.enable_github,
-        settings.enable_x,
-    )
+    bootstrap()
+    logger.info("Starting scheduler")
     start_scheduler()
     try:
         yield
     finally:
+        logger.info("Stopping scheduler")
         stop_scheduler()
+        logger.info("Application shutdown complete")
 
 
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)

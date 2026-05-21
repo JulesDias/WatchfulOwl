@@ -88,11 +88,11 @@ def confidence_from_score(score: int) -> str:
 
 
 def _github_star_score(stars: int) -> int:
-    if stars >= 5000:
+    if stars >= 2000:
         return 12
-    if stars >= 1000:
-        return 10
     if stars >= 500:
+        return 10
+    if stars >= 300:
         return 8
     if stars >= 100:
         return 6
