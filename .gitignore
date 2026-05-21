@@ -1,0 +1,97 @@
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.crt
+
+# Credentials & tokens
+secrets.json
+credentials.json
+config.local.py
+
+# Database & local data
+*.db
+*.sqlite
+*.sqlite3
+watchful_owl.db
+*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE & editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs & temporary files
+*.log
+logs/
+*.tmp
+*.temp
+tmp/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project specific
+watchful_owl.db
+*.db
+.env
+discord_webhook_urls.txt
+api_keys.txt
+
+# Test reports
+.pytest_cache/
+.tox/
+coverage.xml
+
+# Node (si utilisé pour le frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE specific files
+*.sublime-workspace
+.project
+.pydevproject

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Watchful Owl</title>
+    <link rel="stylesheet" href="/static/styles.css?v=sections-2" />
+    <link rel="icon" href="/static/owl-mark.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="/" class="logo">
+          <img src="/static/owl-mark.svg" alt="The Watchful Owl" class="logo-icon" />
+          <span class="logo-text">Watchful Owl</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <h3 class="nav-title">Rubriques</h3>
+        <ul class="nav-list">
+          <li>
+            <button class="nav-item active" data-section="all">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+              <span>Tous</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-section="inbox">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 13h2v8H3zm4-8h2v16H7zm4-2h2v18h-2zm4 4h2v14h-2zm4-4h2v18h-2z"/></svg>
+              <span>A traiter</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-section="priority">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.96 5.36 6.5 7.92 6.5 11v5l-2 2v1h17v-1l-2-2z"/></svg>
+              <span>Prioritaires</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-section="favorites">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M17 3H5c-1.11 0-1.99.9-1.99 2L3 21l9-4 9 4V5c0-1.1-.89-2-2-2z"/></svg>
+              <span>Favoris</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-section="reviewed">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              <span>Deja lus</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-section="github">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 2a10 10 0 0 0-3 19c.5.1.7-.2.7-.5v-2c-2.8.6-3.4-1.2-3.4-1.2-.5-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 3 .8.1-.6.3-1.1.6-1.3-2.2-.2-4.5-1.1-4.5-4.9 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.3 4.7-4.5 4.9.4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></svg>
+              <span>GitHub</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item secondary" id="add-github-button" title="Ajouter un repo GitHub">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              <span>Ajouter repo</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item" data-section="social">
+              <svg viewBox="0 0 24 24" class="nav-icon"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 9h-4v4H8v-4H4v-2h4V6h2v4h4v2z"/></svg>
+              <span>Reseaux</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="nav-section">
+        <h3 class="nav-title">Niveaux</h3>
+        <div class="quick-filters">
+          <button class="filter-chip" data-severity="critical">Critiques</button>
+          <button class="filter-chip" data-severity="important">Important</button>
+          <button class="filter-chip" data-severity="watch">A suivre</button>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <h3 class="nav-title">Sources</h3>
+        <div class="source-list" id="source-list"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="action-button secondary" id="refresh-button" title="Rafraichir">
+          <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+        </button>
+        <button class="action-button primary" id="collect-button">
+          <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          <span>Collecter</span>
+        </button>
+      </div>
+    </nav>
+
+    <main class="main-container">
+      <header class="top-header">
+        <div class="header-left">
+          <h1 id="section-title">Tous les signaux</h1>
+          <p id="section-subtitle" class="subtitle">Vue complete de la base locale</p>
+        </div>
+        <div class="header-right">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" class="search-icon"><path d="M15.5 1h-8C6.12 1 5 2.12 5 3.5v17C5 21.88 6.12 23 7.5 23h8c1.38 0 2.5-1.12 2.5-2.5v-17C18 2.12 16.88 1 15.5 1zm-4 21c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4.5-4H7V4h9v14z"/></svg>
+            <input id="search-input" type="search" placeholder="Rechercher..." autocomplete="off" />
+          </div>
+          <button id="theme-toggle" class="action-button secondary" title="Basculer le theme sombre">
+            <svg viewBox="0 0 24 24" class="theme-icon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <div class="metrics-bar">
+            <div class="metric-mini">
+              <span class="metric-label">Total</span>
+              <strong id="metric-total">0</strong>
+            </div>
+            <div class="metric-mini">
+              <span class="metric-label">Alertes</span>
+              <strong id="metric-alerts">0</strong>
+            </div>
+            <div class="metric-mini critical">
+              <span class="metric-label">Critiques</span>
+              <strong id="metric-critical">0</strong>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <section class="signal-feed">
+          <div class="feed-header">
+            <div class="feed-controls">
+              <select id="source-filter" class="filter-select">
+                <option value="">Toutes les sources</option>
+                <option value="rss">RSS</option>
+                <option value="github">GitHub</option>
+                <option value="x">X</option>
+                <option value="manual">Manual</option>
+              </select>
+              <select id="severity-filter" class="filter-select">
+                <option value="">Toutes les severites</option>
+                <option value="critical">Critical</option>
+                <option value="important">Important</option>
+                <option value="watch">Watch</option>
+                <option value="info">Info</option>
+              </select>
+              <input id="score-filter" type="number" class="filter-select" min="0" max="50" placeholder="Score min" />
+            </div>
+            <span id="result-count" class="result-count">0 resultat</span>
+          </div>
+
+          <div id="signals-container" class="signals-timeline"></div>
+        </section>
+
+        <aside class="detail-panel">
+          <div id="detail-empty" class="empty-detail">
+            <svg viewBox="0 0 24 24" class="empty-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11z"/></svg>
+            <h3>Selectionnez un signal</h3>
+            <p>Le detail apparaitra ici</p>
+          </div>
+
+          <article id="detail-content" class="detail-content hidden">
+            <div class="detail-header">
+              <div class="detail-badges">
+                <span id="detail-severity" class="badge-pill severity-pill">info</span>
+                <span id="detail-confidence" class="badge-pill confidence-pill">low</span>
+              </div>
+              <span id="detail-score" class="score-badge">0</span>
+            </div>
+
+            <h2 id="detail-title"></h2>
+            <p id="detail-meta" class="detail-meta"></p>
+
+            <div class="detail-body-container">
+              <p id="detail-body" class="detail-body"></p>
+            </div>
+
+            <div class="detail-grid">
+              <div class="detail-item">
+                <dt>CVE</dt>
+                <dd id="detail-cves"></dd>
+              </div>
+              <div class="detail-item">
+                <dt>Mots-cles</dt>
+                <dd id="detail-keywords"></dd>
+              </div>
+              <div class="detail-item">
+                <dt>Produits</dt>
+                <dd id="detail-products"></dd>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <button id="mark-read-button" class="action-button secondary" type="button" title="Marquer comme lu">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </button>
+              <button id="favorite-button" class="action-button secondary" type="button" title="Ajouter aux favoris">
+                <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-1.99.9-1.99 2L3 21l9-4 9 4V5c0-1.1-.89-2-2-2z"/></svg>
+              </button>
+              <a id="detail-link" class="action-button primary" href="#" target="_blank" rel="noreferrer">
+                Lire la source
+              </a>
+            </div>
+          </article>
+        </aside>
+      </div>
+
+      <section class="insights-section">
+        <div class="insight-panel">
+          <h3>Mots-cles dominants</h3>
+          <div id="keyword-cloud" class="tag-cloud"></div>
+        </div>
+        <div class="insight-panel">
+          <h3>Technologies touchees</h3>
+          <div id="product-cloud" class="tag-cloud"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+    
+    <!-- Modal pour ajouter un repo GitHub -->
+    <div id="add-github-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2>Ajouter un repo GitHub</h2>
+          <button class="modal-close" type="button" aria-label="Fermer">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-subtitle">Entrez l'URL d'un repo GitHub pour le monitorer</p>
+          <input 
+            id="github-url-input" 
+            type="text" 
+            placeholder="https://github.com/owner/repository ou owner/repository" 
+            autocomplete="off"
+            class="modal-input"
+          />
+        </div>
+        <div class="modal-footer">
+          <button class="action-button secondary modal-cancel" type="button">Annuler</button>
+          <button class="action-button primary modal-submit" type="button">Ajouter</button>
+        </div>
+      </div>
+    </div>
+    
+    <script src="/static/dashboard.js?v=github-add-1" defer></script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="The Watchful Owl">
+  <!-- Minimal elegant owl icon -->
+  <defs>
+    <linearGradient id="owlGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Head circle -->
+  <circle cx="48" cy="48" r="42" fill="none" stroke="url(#owlGradient)" stroke-width="2.5"/>
+  
+  <!-- Eyes - minimal and elegant -->
+  <circle cx="36" cy="42" r="8" fill="url(#owlGradient)"/>
+  <circle cx="60" cy="42" r="8" fill="url(#owlGradient)"/>
+  
+  <!-- Pupils - small and sharp -->
+  <circle cx="36" cy="42" r="3.5" fill="#0f1419"/>
+  <circle cx="60" cy="42" r="3.5" fill="#0f1419"/>
+  
+  <!-- Ear tufts - minimal lines -->
+  <path d="M32 12 Q30 22 32 32" fill="none" stroke="url(#owlGradient)" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M64 12 Q66 22 64 32" fill="none" stroke="url(#owlGradient)" stroke-width="2.5" stroke-linecap="round"/>
+  
+  <!-- Beak - minimal -->
+  <path d="M48 52 L45 60 L51 60 Z" fill="url(#owlGradient)"/>
+  
+  <!-- Subtle chest marking -->
+  <path d="M48 60 Q40 70 48 78 Q56 70 48 60" fill="none" stroke="url(#owlGradient)" stroke-width="2" stroke-opacity="0.6"/>
+</svg>
