@@ -213,4 +213,3 @@ docker run --rm -p 8000:8000 --env-file .env watchful-owl
 - Integration Mastodon/Bluesky.
 - Clustering des signaux similaires.
 - Resume automatique par LLM.
-- Lien avec un inventaire de packages type VersionFinder.
