@@ -100,11 +100,15 @@ DISCORD_WEBHOOK_URL=
 ENABLE_RSS=true
 ENABLE_GITHUB=true
 ENABLE_X=true
+ENABLE_SCHEDULER=true
 
 # Paramètres
 COLLECTION_INTERVAL_MINUTES=15
 ALERT_SCORE_THRESHOLD=15
 MAX_RESULTS_PER_SOURCE=25
+MAX_CONCURRENT_COLLECTORS=3
+COLLECTOR_TIMEOUT_SECONDS=60.0
+RSS_FEED_CONCURRENCY=5
 HTTP_TIMEOUT_SECONDS=15.0
 GITHUB_MIN_STARS=0
 ```
@@ -115,7 +119,11 @@ GITHUB_MIN_STARS=0
 | `GITHUB_TOKEN` | Non | Augmente limites API GitHub |
 | `X_BEARER_TOKEN` | Non | Active collecteur X/Twitter |
 | `DISCORD_WEBHOOK_URL` | Non | Active alertes Discord |
+| `ENABLE_SCHEDULER` | Non | Lance le scheduler embarqué avec l'application |
 | `ALERT_SCORE_THRESHOLD` | Non | Seuil de score minimum pour alerte |
+| `MAX_CONCURRENT_COLLECTORS` | Non | Nombre maximum de collecteurs exécutés en parallèle |
+| `COLLECTOR_TIMEOUT_SECONDS` | Non | Timeout global par collecteur |
+| `RSS_FEED_CONCURRENCY` | Non | Nombre de flux RSS récupérés en parallèle |
 
 ## Démarrage
 
@@ -126,10 +134,10 @@ python -m uvicorn app.main:app --reload
 
 ### Production
 ```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-L'application crée automatiquement la base SQLite et lance le scheduler. Une collecte peut être déclenchée manuellement via l'API.
+L'application crée automatiquement la base SQLite et lance le scheduler si `ENABLE_SCHEDULER=true`. Évitez `--workers > 1` avec le scheduler embarqué, sinon chaque worker lancera sa propre collecte planifiée. Pour un déploiement multi-workers, lancez les workers API avec `ENABLE_SCHEDULER=false` et gardez un seul processus chargé de la collecte. Une collecte peut être déclenchée manuellement via l'API.
 
 **Accès** : http://localhost:8000/
 
@@ -146,6 +154,17 @@ ruff check .
 ruff format .
 ```
 
+## Migrations
+
+Les migrations de schéma sont versionnées avec Alembic.
+
+```bash
+python -m alembic upgrade head
+python -m alembic revision --autogenerate -m "description"
+```
+
+`SQLModel.metadata.create_all` reste utilisé au démarrage pour les installations locales neuves, mais les évolutions de schéma doivent passer par Alembic.
+
 ## Utilisation API
 
 ### Exemples de requêtes
@@ -159,6 +178,7 @@ curl http://localhost:8000/signals
 # Signaux filtrés
 curl "http://localhost:8000/signals?source_type=github&min_score=12"
 curl "http://localhost:8000/signals?limit=50"
+curl "http://localhost:8000/signals?limit=50&offset=50"
 
 # Alertes générées
 curl http://localhost:8000/alerts
@@ -168,6 +188,9 @@ curl http://localhost:8000/stats
 
 # Déclencher collecte manuelle
 curl -X POST http://localhost:8000/collect/run
+
+# Historique des collectes
+curl http://localhost:8000/collection-runs
 ```
 
 ### Endpoints
@@ -178,7 +201,10 @@ curl -X POST http://localhost:8000/collect/run
 | GET | `/signals/{id}` | Détail d'un signal |
 | GET | `/alerts` | Alertes générées |
 | GET | `/stats` | Statistiques globales |
+| GET | `/collection-runs` | Historique paginé des collectes par source |
 | POST | `/collect/run` | Collecte manuelle immédiate |
+
+Les endpoints de liste acceptent `limit` et `offset`, et renvoient les headers `X-Total-Count`, `X-Page-Limit`, `X-Page-Offset` et `X-Has-More`.
 
 ## Scoring
 

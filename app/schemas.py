@@ -26,6 +26,7 @@ class SignalRead(BaseModel):
     author: str | None
     published_at: datetime | None
     collected_at: datetime
+    deleted_at: datetime | None = None
     cves: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     products: list[str] = Field(default_factory=list)
@@ -41,6 +42,19 @@ class SignalRead(BaseModel):
 
 class GitHubRepoAddRequest(BaseModel):
     repo_url: str = Field(min_length=3)
+
+
+class CollectionRunRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    source: str
+    started_at: datetime
+    finished_at: datetime | None
+    duration_ms: int
+    success: bool
+    collected_count: int
+    error_message: str | None
 
 
 class CollectionSummary(BaseModel):

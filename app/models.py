@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -34,3 +34,16 @@ class Signal(SQLModel, table=True):
         default="",
         sa_column=Column(String, unique=True, index=True, nullable=False),
     )
+
+
+class CollectionRun(SQLModel, table=True):
+    __tablename__ = "collection_runs"
+
+    id: int | None = Field(default=None, primary_key=True)
+    source: str = Field(index=True)
+    started_at: datetime = Field(index=True)
+    finished_at: datetime | None = Field(default=None, index=True)
+    duration_ms: int = Field(default=0, index=True)
+    success: bool = Field(default=False, index=True)
+    collected_count: int = Field(default=0, index=True)
+    error_message: str | None = Field(default=None, sa_column=Column(Text))

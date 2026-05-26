@@ -19,13 +19,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     bootstrap()
-    logger.info("Starting scheduler")
-    start_scheduler()
+    if settings.enable_scheduler:
+        logger.info("Starting scheduler")
+        start_scheduler()
+    else:
+        logger.info("Scheduler disabled by ENABLE_SCHEDULER")
     try:
         yield
     finally:
-        logger.info("Stopping scheduler")
-        stop_scheduler()
+        if settings.enable_scheduler:
+            logger.info("Stopping scheduler")
+            stop_scheduler()
         logger.info("Application shutdown complete")
 
 

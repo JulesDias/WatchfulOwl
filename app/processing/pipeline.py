@@ -1,4 +1,7 @@
+import asyncio
 import logging
+from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
@@ -10,13 +13,24 @@ from app.collectors.rss_collector import RSSCollector
 from app.collectors.x_collector import XCollector
 from app.config import Settings, get_settings
 from app.database import engine
-from app.models import Signal
+from app.models import CollectionRun, Signal
 from app.processing.deduplicate import compute_fingerprint, fingerprint_exists
 from app.processing.extract import enrich_signal
 from app.processing.score import score_signal
 from app.schemas import CollectionSummary, SignalCreate
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CollectorResult:
+    source: str
+    started_at: datetime
+    finished_at: datetime
+    duration_ms: int
+    success: bool
+    signals: list[SignalCreate]
+    error_message: str | None = None
 
 
 async def run_collection_cycle(
@@ -35,7 +49,7 @@ async def run_collection_cycle(
             "Starting collection cycle with collectors: %s",
             ", ".join(collector.source_type for collector in collectors) or "none",
         )
-        raw_signals = await _collect_all(collectors)
+        raw_signals = await _collect_all(collectors, session=session, settings=settings)
         summary.collected = len(raw_signals)
 
         for raw_signal in raw_signals:
@@ -94,6 +108,7 @@ def build_collectors(settings: Settings) -> list[BaseCollector]:
                 feed_urls=settings.rss_feed_urls,
                 max_results=settings.max_results_per_source,
                 timeout_seconds=settings.http_timeout_seconds,
+                max_concurrent_feeds=settings.rss_feed_concurrency,
             )
         )
     if settings.enable_github:
@@ -116,14 +131,89 @@ def build_collectors(settings: Settings) -> list[BaseCollector]:
     return collectors
 
 
-async def _collect_all(collectors: list[BaseCollector]) -> list[SignalCreate]:
+async def _collect_all(
+    collectors: list[BaseCollector],
+    session: Session,
+    settings: Settings,
+) -> list[SignalCreate]:
+    results = await _run_collectors(collectors, settings)
+    _record_collection_runs(session, results)
+
     raw_signals: list[SignalCreate] = []
-    for collector in collectors:
-        try:
-            collected = await collector.collect()
-        except Exception:
-            logger.exception("Collector %s failed", collector.source_type)
+    for result in results:
+        if not result.success:
             continue
-        logger.info("Collector %s produced %s signals", collector.source_type, len(collected))
-        raw_signals.extend(collected)
+        logger.info("Collector %s produced %s signals", result.source, len(result.signals))
+        raw_signals.extend(result.signals)
     return raw_signals
+
+
+async def _run_collectors(
+    collectors: list[BaseCollector],
+    settings: Settings,
+) -> list[CollectorResult]:
+    semaphore = asyncio.Semaphore(settings.max_concurrent_collectors)
+
+    async def run_one(collector: BaseCollector) -> CollectorResult:
+        async with semaphore:
+            started_at = datetime.now(timezone.utc)
+            signals: list[SignalCreate] = []
+            error_message: str | None = None
+            success = False
+            try:
+                signals = await asyncio.wait_for(
+                    collector.collect(),
+                    timeout=settings.collector_timeout_seconds,
+                )
+                success = True
+            except TimeoutError:
+                error_message = (
+                    f"Collector exceeded {settings.collector_timeout_seconds:.1f}s timeout"
+                )
+                logger.warning("Collector %s timed out", collector.source_type)
+            except Exception as exc:
+                error_message = str(exc) or exc.__class__.__name__
+                logger.exception("Collector %s failed", collector.source_type)
+
+            finished_at = datetime.now(timezone.utc)
+            return CollectorResult(
+                source=collector.source_type,
+                started_at=started_at,
+                finished_at=finished_at,
+                duration_ms=int((finished_at - started_at).total_seconds() * 1000),
+                success=success,
+                signals=signals,
+                error_message=_truncate_error(error_message),
+            )
+
+    return await asyncio.gather(*(run_one(collector) for collector in collectors))
+
+
+def _record_collection_runs(session: Session, results: list[CollectorResult]) -> None:
+    if not results:
+        return
+
+    for result in results:
+        session.add(
+            CollectionRun(
+                source=result.source,
+                started_at=result.started_at,
+                finished_at=result.finished_at,
+                duration_ms=result.duration_ms,
+                success=result.success,
+                collected_count=len(result.signals) if result.success else 0,
+                error_message=result.error_message,
+            )
+        )
+
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        logger.exception("Failed to persist collection run metadata")
+
+
+def _truncate_error(error_message: str | None, max_length: int = 1000) -> str | None:
+    if error_message is None or len(error_message) <= max_length:
+        return error_message
+    return f"{error_message[: max_length - 3]}..."

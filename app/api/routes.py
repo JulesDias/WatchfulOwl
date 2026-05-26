@@ -6,20 +6,26 @@ from datetime import datetime, timezone
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlalchemy import or_
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.collectors.github_collector import _repo_to_signal
 from app.config import get_settings
 from app.database import get_session
-from app.models import Signal
+from app.models import CollectionRun, Signal
 from app.processing.pipeline import run_collection_cycle
 from app.processing.deduplicate import compute_fingerprint
 from app.processing.extract import enrich_signal
 from app.processing.score import score_signal
-from app.schemas import CollectionSummary, GitHubRepoAddRequest, SignalRead, StatsResponse
+from app.schemas import (
+    CollectionRunRead,
+    CollectionSummary,
+    GitHubRepoAddRequest,
+    SignalRead,
+    StatsResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +46,9 @@ async def health() -> dict[str, str]:
 
 @router.get("/signals", response_model=list[SignalRead])
 async def list_signals(
+    response: Response,
     limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     source_type: str | None = None,
     severity: str | None = None,
     status: str | None = None,
@@ -50,23 +58,32 @@ async def list_signals(
     q: str | None = None,
     session: Session = Depends(get_session),
 ) -> list[SignalRead]:
-    statement = select(Signal).where(Signal.deleted_at.is_(None))
+    conditions = [Signal.deleted_at.is_(None)]
     if source_type:
-        statement = statement.where(Signal.source_type == source_type)
+        conditions.append(Signal.source_type == source_type)
     if severity:
-        statement = statement.where(Signal.severity == severity)
+        conditions.append(Signal.severity == severity)
     if status:
-        statement = statement.where(Signal.status == status)
+        conditions.append(Signal.status == status)
     if is_favorite is not None:
-        statement = statement.where(Signal.is_favorite == is_favorite)
+        conditions.append(Signal.is_favorite == is_favorite)
     if unread:
-        statement = statement.where(Signal.status != "reviewed")
+        conditions.append(Signal.status != "reviewed")
     if min_score is not None:
-        statement = statement.where(Signal.score >= min_score)
+        conditions.append(Signal.score >= min_score)
     if q:
         like = f"%{q}%"
-        statement = statement.where(or_(Signal.title.ilike(like), Signal.content.ilike(like)))
-    statement = statement.order_by(Signal.collected_at.desc()).limit(limit)
+        conditions.append(or_(Signal.title.ilike(like), Signal.content.ilike(like)))
+
+    total = _count_rows(session, Signal, conditions)
+    _set_pagination_headers(response, total=total, limit=limit, offset=offset)
+    statement = (
+        select(Signal)
+        .where(*conditions)
+        .order_by(Signal.collected_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     signals = session.exec(statement).all()
     return [_to_signal_read(signal) for signal in signals]
 
@@ -142,14 +159,20 @@ async def restore_signal(signal_id: int, session: Session = Depends(get_session)
 
 @router.get("/trash", response_model=list[SignalRead])
 async def list_trash(
+    response: Response,
     limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     session: Session = Depends(get_session),
 ) -> list[SignalRead]:
     """List all deleted signals in trash."""
+    conditions = [Signal.deleted_at.isnot(None)]
+    total = _count_rows(session, Signal, conditions)
+    _set_pagination_headers(response, total=total, limit=limit, offset=offset)
     statement = (
         select(Signal)
-        .where(Signal.deleted_at.isnot(None))
+        .where(*conditions)
         .order_by(Signal.deleted_at.desc())
+        .offset(offset)
         .limit(limit)
     )
     signals = session.exec(statement).all()
@@ -189,14 +212,23 @@ async def purge_all_trash(session: Session = Depends(get_session)) -> dict[str, 
 
 @router.get("/alerts", response_model=list[SignalRead])
 async def list_alerts(
+    response: Response,
     limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     session: Session = Depends(get_session),
 ) -> list[SignalRead]:
     settings = get_settings()
+    conditions = [
+        Signal.deleted_at.is_(None),
+        or_(Signal.status == "alerted", Signal.score >= settings.alert_score_threshold),
+    ]
+    total = _count_rows(session, Signal, conditions)
+    _set_pagination_headers(response, total=total, limit=limit, offset=offset)
     statement = (
         select(Signal)
-        .where(or_(Signal.status == "alerted", Signal.score >= settings.alert_score_threshold))
+        .where(*conditions)
         .order_by(Signal.score.desc(), Signal.collected_at.desc())
+        .offset(offset)
         .limit(limit)
     )
     signals = session.exec(statement).all()
@@ -206,7 +238,7 @@ async def list_alerts(
 @router.get("/stats", response_model=StatsResponse)
 async def stats(session: Session = Depends(get_session)) -> StatsResponse:
     settings = get_settings()
-    signals = session.exec(select(Signal)).all()
+    signals = session.exec(select(Signal).where(Signal.deleted_at.is_(None))).all()
     source_counter = Counter(signal.source_type for signal in signals)
     severity_counter = Counter(signal.severity for signal in signals)
     keyword_counter: Counter[str] = Counter()
@@ -234,6 +266,34 @@ async def stats(session: Session = Depends(get_session)) -> StatsResponse:
 @router.post("/collect/run", response_model=CollectionSummary)
 async def run_collect(session: Session = Depends(get_session)) -> CollectionSummary:
     return await run_collection_cycle(session=session)
+
+
+@router.get("/collection-runs", response_model=list[CollectionRunRead])
+async def list_collection_runs(
+    response: Response,
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    source: str | None = None,
+    success: bool | None = None,
+    session: Session = Depends(get_session),
+) -> list[CollectionRunRead]:
+    conditions = []
+    if source:
+        conditions.append(CollectionRun.source == source)
+    if success is not None:
+        conditions.append(CollectionRun.success == success)
+
+    total = _count_rows(session, CollectionRun, conditions)
+    _set_pagination_headers(response, total=total, limit=limit, offset=offset)
+    statement = (
+        select(CollectionRun)
+        .where(*conditions)
+        .order_by(CollectionRun.started_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    runs = session.exec(statement).all()
+    return [_to_collection_run_read(run) for run in runs]
 
 
 @router.post("/github/add", response_model=SignalRead)
@@ -351,6 +411,7 @@ def _to_signal_read(signal: Signal) -> SignalRead:
         author=signal.author,
         published_at=signal.published_at,
         collected_at=signal.collected_at,
+        deleted_at=signal.deleted_at,
         cves=_json_list(signal.cves),
         keywords=_json_list(signal.keywords),
         products=_json_list(signal.products),
@@ -363,6 +424,37 @@ def _to_signal_read(signal: Signal) -> SignalRead:
         is_favorite=signal.is_favorite,
         fingerprint=signal.fingerprint,
     )
+
+
+def _to_collection_run_read(run: CollectionRun) -> CollectionRunRead:
+    return CollectionRunRead(
+        id=run.id or 0,
+        source=run.source,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        duration_ms=run.duration_ms,
+        success=run.success,
+        collected_count=run.collected_count,
+        error_message=run.error_message,
+    )
+
+
+def _count_rows(session: Session, model: type[Any], conditions: list[Any]) -> int:
+    statement = select(func.count()).select_from(model).where(*conditions)
+    return int(session.exec(statement).one())
+
+
+def _set_pagination_headers(
+    response: Response,
+    *,
+    total: int,
+    limit: int,
+    offset: int,
+) -> None:
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Page-Limit"] = str(limit)
+    response.headers["X-Page-Offset"] = str(offset)
+    response.headers["X-Has-More"] = str(offset + limit < total).lower()
 
 
 def _json_list(value: str) -> list[str]:

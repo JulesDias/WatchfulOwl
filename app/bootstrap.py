@@ -56,6 +56,15 @@ def validate_config() -> None:
     if settings.max_results_per_source < 1:
         errors.append("MAX_RESULTS_PER_SOURCE must be >= 1")
 
+    if settings.max_concurrent_collectors < 1:
+        errors.append("MAX_CONCURRENT_COLLECTORS must be >= 1")
+
+    if settings.collector_timeout_seconds <= 0:
+        errors.append("COLLECTOR_TIMEOUT_SECONDS must be > 0")
+
+    if settings.rss_feed_concurrency < 1:
+        errors.append("RSS_FEED_CONCURRENCY must be >= 1")
+
     if settings.http_timeout_seconds <= 0:
         errors.append("HTTP_TIMEOUT_SECONDS must be > 0")
 

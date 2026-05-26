@@ -13,8 +13,8 @@ DEFAULT_RSS_FEEDS = [
     "https://www.reddit.com/r/cybersecurity/.rss",  # Reddit r/cybersecurity - general discussions
     "https://www.reddit.com/r/hacking/.rss",  # Reddit r/hacking - pentesting & hacking
     "https://0dayfans.com/feed.rss",
-    "https://www.cshub.com/rss/categories/attacks"
-    "https://www.cshub.com/rss/categories/malware"
+    "https://www.cshub.com/rss/categories/attacks",
+    "https://www.cshub.com/rss/categories/malware",
 ]
 
 
@@ -36,10 +36,14 @@ class Settings(BaseSettings):
     enable_rss: bool = True
     enable_github: bool = True
     enable_x: bool = True
+    enable_scheduler: bool = True
 
     collection_interval_minutes: int = 15
     alert_score_threshold: int = 15
     max_results_per_source: int = 25
+    max_concurrent_collectors: int = 3
+    collector_timeout_seconds: float = 60.0
+    rss_feed_concurrency: int = 5
     http_timeout_seconds: float = 15.0
     github_min_stars: int = 0
 
