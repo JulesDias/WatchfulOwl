@@ -10,7 +10,9 @@ from app.alerts.discord import send_discord_alert
 from app.collectors.base import BaseCollector
 from app.collectors.github_collector import GitHubCollector
 from app.collectors.rss_collector import RSSCollector
+from app.collectors.x_feed_collector import XFeedCollector
 from app.collectors.x_collector import XCollector
+from app.collectors.snscrape_collector import SnscrapeCollector
 from app.config import Settings, get_settings
 from app.database import engine
 from app.models import CollectionRun, Signal
@@ -126,6 +128,23 @@ def build_collectors(settings: Settings) -> list[BaseCollector]:
                 bearer_token=settings.x_bearer_token,
                 max_results=settings.max_results_per_source,
                 timeout_seconds=settings.http_timeout_seconds,
+            )
+        )
+    if settings.enable_x_snscrape:
+        collectors.append(
+            SnscrapeCollector(
+                max_results=settings.max_results_per_source,
+                queries=settings.x_snscrape_queries,
+                min_interest_terms=settings.x_snscrape_min_interest_terms,
+            )
+        )
+    if settings.enable_x_feed:
+        collectors.append(
+            XFeedCollector(
+                feed_urls=settings.x_feed_urls,
+                max_results=settings.max_results_per_source,
+                timeout_seconds=settings.http_timeout_seconds,
+                min_interest_terms=settings.x_feed_min_interest_terms,
             )
         )
     return collectors

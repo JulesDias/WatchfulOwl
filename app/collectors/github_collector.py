@@ -118,6 +118,7 @@ def _repo_to_signal(item: dict[str, Any]) -> SignalCreate:
     return SignalCreate(
         source="GitHub",
         source_type="github",
+        channel="github",
         title=full_name,
         content=content,
         url=item.get("html_url"),

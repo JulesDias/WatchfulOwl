@@ -60,7 +60,11 @@ class RSSCollector(BaseCollector):
     ) -> FeedResult:
         async with semaphore:
             try:
-                response = await client.get(feed_url)
+                # Add headers to avoid being blocked by Nitter or other services
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                }
+                response = await client.get(feed_url, headers=headers)
                 response.raise_for_status()
             except httpx.HTTPError as exc:
                 logger.warning("RSS fetch failed for %s: %s", feed_url, exc)
@@ -71,10 +75,15 @@ class RSSCollector(BaseCollector):
                 logger.warning("RSS parse warning for %s: %s", feed_url, parsed.bozo_exception)
 
             feed_title = parsed.feed.get("title", feed_url)
+            # Detect if this is a social network feed (Nitter)
+            is_nitter = "nitter.net" in feed_url
+            channel = "social" if is_nitter else "news"
+            source_type = "x" if is_nitter else self.source_type
             signals = [
                 SignalCreate(
                     source=feed_title,
-                    source_type=self.source_type,
+                    source_type=source_type,
+                    channel=channel,
                     title=_clean_text(entry.get("title", "Untitled RSS entry")),
                     content=_entry_content(entry),
                     url=entry.get("link"),

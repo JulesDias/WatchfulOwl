@@ -39,6 +39,9 @@ def validate_config() -> None:
     if settings.enable_x and not settings.x_bearer_token:
         logger.info("X/Twitter source enabled but X_BEARER_TOKEN not set (collector disabled)")
 
+    if settings.enable_x_feed and not settings.x_feed_urls:
+        errors.append("X feed source enabled but no X_FEED_URLS configured")
+
     if settings.enable_rss and not settings.rss_feed_urls:
         errors.append("RSS source enabled but no RSS feed URLs configured")
 
@@ -64,6 +67,9 @@ def validate_config() -> None:
 
     if settings.rss_feed_concurrency < 1:
         errors.append("RSS_FEED_CONCURRENCY must be >= 1")
+
+    if settings.x_feed_min_interest_terms < 1:
+        errors.append("X_FEED_MIN_INTEREST_TERMS must be >= 1")
 
     if settings.http_timeout_seconds <= 0:
         errors.append("HTTP_TIMEOUT_SECONDS must be > 0")
@@ -102,6 +108,12 @@ def log_startup_info() -> None:
     logger.info("  X/Twitter: %s", "enabled" if settings.enable_x else "disabled")
     if settings.enable_x:
         logger.info("    - Token: %s", "provided" if settings.x_bearer_token else "not provided")
+    logger.info("  X/Twitter Snscrape: %s", "enabled" if settings.enable_x_snscrape else "disabled")
+    if settings.enable_x_snscrape:
+        logger.info("    - Queries: %d configured", len(settings.x_snscrape_queries))
+    logger.info("  X RSS/Atom feeds: %s", "enabled" if settings.enable_x_feed else "disabled")
+    if settings.enable_x_feed:
+        logger.info("    - Feed URLs: %d configured", len(settings.x_feed_urls))
     logger.info("-" * 60)
     logger.info("Collection interval: %d minutes", settings.collection_interval_minutes)
     logger.info("Alert threshold: %d points", settings.alert_score_threshold)

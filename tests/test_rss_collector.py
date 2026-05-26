@@ -27,7 +27,7 @@ class FakeRSSClient:
     async def __aexit__(self, *args: Any) -> None:
         return None
 
-    async def get(self, url: str) -> FakeRSSResponse:
+    async def get(self, url: str, **kwargs: Any) -> FakeRSSResponse:
         return FakeRSSResponse(self.feeds[url])
 
 

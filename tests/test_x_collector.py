@@ -131,6 +131,7 @@ def test_x_pipeline_collects_enriches_and_saves_signal(
         enable_rss=False,
         enable_github=False,
         enable_x=True,
+        enable_x_snscrape=False,
         x_bearer_token="token",
         discord_webhook_url=None,
     )
@@ -152,6 +153,7 @@ def test_build_collectors_uses_x_collector_when_enabled() -> None:
         enable_rss=False,
         enable_github=False,
         enable_x=True,
+        enable_x_snscrape=False,
         x_bearer_token=None,
     )
 
@@ -166,6 +168,7 @@ def test_build_collectors_skips_x_collector_when_disabled() -> None:
         enable_rss=False,
         enable_github=False,
         enable_x=False,
+        enable_x_snscrape=False,
         x_bearer_token="token",
     )
 

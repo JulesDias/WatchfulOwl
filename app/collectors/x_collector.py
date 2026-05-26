@@ -95,6 +95,7 @@ def _tweet_to_signal(tweet: dict[str, Any], users: dict[str, dict[str, Any]]) ->
     return SignalCreate(
         source="X",
         source_type="x",
+        channel="social",
         title=_title_from_text(text),
         content=text,
         url=url,

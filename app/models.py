@@ -10,6 +10,7 @@ class Signal(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     source: str = Field(index=True)
     source_type: str = Field(index=True)
+    channel: str = Field(default="news", index=True)  # 'news', 'social', 'github'
     title: str
     content: str = ""
     url: str | None = Field(default=None, index=True)

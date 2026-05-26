@@ -27,7 +27,7 @@ const SECTION_CONFIG = {
   social: {
     title: "Reseaux",
     subtitle: "Signaux issus des collecteurs sociaux actives",
-    params: { source_type: "x" },
+    params: { channel: "social" },
   },
   trash: {
     title: "Corbeille",

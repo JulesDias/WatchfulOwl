@@ -23,6 +23,7 @@
 ### API
 - **GitHub Search API** : dépôts récents contenant CVE, PoC, exploit, RCE, LPE ou authentification bypass
 - **X/Twitter API v2** : recherche récente sur menaces cyber (optionnel, nécessite authentification)
+- **Flux X RSS/Atom** : ingestion optionnelle de flux de posts fournis par un service autorisé, sans scraping direct de `x.com`
 
 ## Sécurité
 
@@ -30,6 +31,7 @@
 - Aucune exécution de code malveillant
 - Aucun clonage automatique de dépôts d'exploit
 - Utilisation d'APIs officielles et flux publics autorisés
+- Aucun scraping direct de `x.com` : le collecteur `X_FEED` consomme uniquement des flux RSS/Atom configurés par l'opérateur
 - Secrets stockés en variables d'environnement uniquement
 - Gestion gracieuse des erreurs HTTP et rate limits
 
@@ -100,6 +102,7 @@ DISCORD_WEBHOOK_URL=
 ENABLE_RSS=true
 ENABLE_GITHUB=true
 ENABLE_X=true
+ENABLE_X_FEED=false
 ENABLE_SCHEDULER=true
 
 # Paramètres
@@ -111,6 +114,8 @@ COLLECTOR_TIMEOUT_SECONDS=60.0
 RSS_FEED_CONCURRENCY=5
 HTTP_TIMEOUT_SECONDS=15.0
 GITHUB_MIN_STARS=0
+X_FEED_URLS=
+X_FEED_MIN_INTEREST_TERMS=1
 ```
 
 ### Variables clés
@@ -118,6 +123,8 @@ GITHUB_MIN_STARS=0
 |----------|------------|-------|
 | `GITHUB_TOKEN` | Non | Augmente limites API GitHub |
 | `X_BEARER_TOKEN` | Non | Active collecteur X/Twitter |
+| `X_FEED_URLS` | Non | Flux RSS/Atom de posts X à ingérer si `ENABLE_X_FEED=true` |
+| `X_FEED_MIN_INTEREST_TERMS` | Non | Nombre minimum de termes cyber requis pour garder un post sans CVE/lien GitHub |
 | `DISCORD_WEBHOOK_URL` | Non | Active alertes Discord |
 | `ENABLE_SCHEDULER` | Non | Lance le scheduler embarqué avec l'application |
 | `ALERT_SCORE_THRESHOLD` | Non | Seuil de score minimum pour alerte |
@@ -177,6 +184,7 @@ curl http://localhost:8000/signals
 
 # Signaux filtrés
 curl "http://localhost:8000/signals?source_type=github&min_score=12"
+curl "http://localhost:8000/signals?source_type=x&min_score=6"
 curl "http://localhost:8000/signals?limit=50"
 curl "http://localhost:8000/signals?limit=50&offset=50"
 

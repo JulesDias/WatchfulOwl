@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class SignalCreate(BaseModel):
     source: str
     source_type: str
+    channel: str = "news"  # 'news', 'social', 'github'
     title: str
     content: str = ""
     url: str | None = None
@@ -20,6 +21,7 @@ class SignalRead(BaseModel):
     id: int
     source: str
     source_type: str
+    channel: str = "news"  # Default for backward compatibility
     title: str
     content: str
     url: str | None

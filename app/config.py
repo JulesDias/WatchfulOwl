@@ -15,6 +15,15 @@ DEFAULT_RSS_FEEDS = [
     "https://0dayfans.com/feed.rss",
     "https://www.cshub.com/rss/categories/attacks",
     "https://www.cshub.com/rss/categories/malware",
+    # Security accounts Twitter feeds via Nitter
+    "https://nitter.net/swiftonsecurity/rss",
+    "https://nitter.net/nntaleb/rss",
+    "https://nitter.net/cybersecuritynw/rss",
+    "https://nitter.net/blueteamsec1/rss",
+    "https://nitter.net/github/rss",
+    "https://nitter.net/metsploit/rss",
+    "https://nitter.net/cyber/rss",
+    "https://nitter.net/SecurityWeek/rss",
 ]
 
 
@@ -35,7 +44,9 @@ class Settings(BaseSettings):
 
     enable_rss: bool = True
     enable_github: bool = True
-    enable_x: bool = True
+    enable_x: bool = False
+    enable_x_feed: bool = False
+    enable_x_snscrape: bool = False
     enable_scheduler: bool = True
 
     collection_interval_minutes: int = 15
@@ -46,8 +57,20 @@ class Settings(BaseSettings):
     rss_feed_concurrency: int = 5
     http_timeout_seconds: float = 15.0
     github_min_stars: int = 0
+    x_feed_min_interest_terms: int = 1
 
     rss_feed_urls: list[str] = Field(default_factory=lambda: DEFAULT_RSS_FEEDS.copy())
+    x_feed_urls: list[str] = Field(default_factory=list)
+    x_snscrape_queries: list[str] = Field(
+        default_factory=lambda: [
+            "0day OR zero-day",
+            "PoC released OR exploit released",
+            "RCE OR LPE OR privilege escalation",
+            "CVE-2",
+            "vulnerability discovered",
+        ]
+    )
+    x_snscrape_min_interest_terms: int = 1
 
     @field_validator(
         "github_token", "x_bearer_token", "discord_webhook_url", mode="before"
@@ -65,9 +88,27 @@ class Settings(BaseSettings):
     def parse_rss_feed_urls(cls, value: str | list[str] | None) -> list[str]:
         if value is None:
             return DEFAULT_RSS_FEEDS.copy()
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+        return _parse_csv_list(value)
+
+    @field_validator("x_feed_urls", mode="before")
+    @classmethod
+    def parse_x_feed_urls(cls, value: str | list[str] | None) -> list[str]:
+        if value is None:
+            return []
+        return _parse_csv_list(value)
+
+    @field_validator("x_snscrape_queries", mode="before")
+    @classmethod
+    def parse_x_snscrape_queries(cls, value: str | list[str] | None) -> list[str]:
+        if value is None:
+            return []
+        return _parse_csv_list(value)
+
+
+def _parse_csv_list(value: str | list[str]) -> list[str]:
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return value
 
 
 @lru_cache
